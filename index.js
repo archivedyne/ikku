@@ -1,9 +1,10 @@
+var _ = require('underscore');
 var kuromoji = require('kuromoji');
 var DIC_URL = "node_modules/kuromoji/dist/dict/";
-var _ = require('underscore');
-var SENTENCE_COUNT = 3; // 1文作文する
+
+var SENTENCE_COUNT = 3;
 var START_CHARACTER = '__start__';
-// END_CHARACTER = '__end__';
+// var END_CHARACTER = '__end__';
 
 kuromoji.builder({ dicPath: DIC_URL }).build( function (err, tokenizer) {
   var tokens = tokenizer.tokenize(process.argv[2]);
@@ -64,9 +65,9 @@ var makeSentence = function(dic) {
 };
 
 var choiceWord = function(obj) {
-  var ks = _.keys(obj);
-  var i = _.random(0, ks.length - 1);
-  return ks[i];
+  var keys = _.keys(obj);
+  var i = _.random(0, keys.length - 1);
+  return keys[i];
 };
 
 /*

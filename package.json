@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
-    "kuromoji": "0.0.5"
+    "comma-separated-values": "3.6.4",
+    "kuromoji": "0.0.5",
+    "npm": "3.5.1"
   },
   "devDependencies": {},
   "scripts": {

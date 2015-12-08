@@ -1,34 +1,52 @@
-// modelを作成用
-var kuromoji = require('kuromoji');
-var DIC_URL = "node_modules/kuromoji/dist/dict/";
 var _ = require('underscore');
+var kuromoji = require('kuromoji');
+var CSV = require('comma-separated-values');
+var DIC_URL = "node_modules/kuromoji/dist/dict/";
 var fs  = require('fs');
 var async = require('async');
 
 async.waterfall([
   function ( next ) {
-    var read = fs.createReadStream('./haiku.csv');
+    var read = fs.createReadStream( __dirname + '/model_100.csv');
     read.on('data', function (data) {
-      var data2 = data.toString();
-      data2 = data2.replace(/[\n\r]/g,"");
-      var haikus = data2.split(',');
+      var haikus = new CSV(data.toString(), {
+        header: ['kamigo', 'nakashichi', 'shimogo']
+      }).parse();
       next(null, haikus);
     });
   },
   function ( haikus, next ) {
-    var hash = {};
     kuromoji.builder({ dicPath: DIC_URL }).build( function (err, tokenizer) {
-      _.each( haikus, function (haiku) {
-        var tokens = tokenizer.tokenize(haiku);
-        console.log('データの確認', tokens );
-        hash = countHash( hash, tokens );
-      });
-      next( null, hash );
+      next( null, haikus, tokenizer);
     });
   },
-  function ( hash, next ) {
-    var fileName = 'model.json';
-    fs.writeFile( fileName, JSON.stringify(hash, null, 2), function (error) {
+  function ( haikus, tokenizer, next ) {
+    var goHash = {};
+    var nanaHash = {};
+    var kamigo = _.pluck( haikus, 'kamigo');
+    var shimogo = _.pluck( haikus, 'shimogo');
+    var goNoKus = _.union( kamigo, shimogo );
+    var nanaNoKus = _.pluck( haikus, 'nakashichi' );
+    _.each( goNoKus, function (goNoKu) {
+      var tokens = tokenizer.tokenize(goNoKu);
+      goHash = countHash( goHash, tokens );
+    });
+    _.each( nanaNoKus, function (nanaNoku) {
+      var tokens = tokenizer.tokenize(nanaNoku);
+      nanaHash = countHash( nanaHash, tokens );
+    });
+    next( null, goHash, nanaHash );
+  },
+  function ( goHash, nanaHash, next ) {
+    var fileName = 'model5.json';
+    fs.writeFile( fileName, JSON.stringify(goHash, null, 2), function (error) {
+      if (error) console.log('書き込み失敗', error  );
+      next( null, nanaHash);
+    } );
+  },
+  function ( nanaHash, next ) {
+    var fileName = 'model7.json';
+    fs.writeFile( fileName, JSON.stringify(nanaHash, null, 2), function (error) {
       if (error) console.log('書き込み失敗', error  );
       next();
     } );
@@ -39,10 +57,9 @@ async.waterfall([
 } );
 
 
-var countHash = function ( hash, haikuToken ) {
-  //var keys = _.pluck( haikuToken, 'pos' );
-  var keys = _.map( haikuToken, function ( val, key ) {
-    return key.pos + key.pos_detail_1;
+var countHash = function ( hash, haikuTokens ) {
+  var keys = _.map( haikuTokens, function ( haikuToken ) {
+    return String(haikuToken.pos_detail_1) + String(haikuToken.pos);
   });
   var keyName = keys.join('/');
   if ( !_.has(hash, keyName) ) {
